@@ -4,6 +4,7 @@ from nicegui import ui
 import os
 import string
 
+
 class Dictation:
     def __init__(self):
         # Danh sách câu
@@ -58,21 +59,17 @@ class Dictation:
         finally:
             os.remove(audio_path)  # Xóa file sau khi phát
 
-    def play_feedback_sound(self, x):
+    def play_feedback_sound(self, feedback_type):
         """Phát âm thanh dựa trên kết quả đúng hoặc sai."""
-        if x == 1:
-            tts = gTTS("Correct answer!")
-            audio_path = "correct_answer.mp3"
-        elif x == 2:
-            tts = gTTS("Wrong answer!")
-            audio_path = "wrong_answer.mp3"
-        elif x == 3:
-            tts = gTTS("You have not entered your answer yet.")
-            audio_path = "no_answer.mp3"
-        else:
-            tts = gTTS("The correct answer is:")
-            audio_path = "answer.mp3"
-
+        feedback_messages = {
+            1: "Correct answer!",
+            2: "Wrong answer!",
+            3: "You have not entered your answer yet.",
+            4: "The correct answer is:"
+        }
+        
+        tts = gTTS(feedback_messages.get(feedback_type, ""))
+        audio_path = f"{feedback_messages[feedback_type].replace(' ', '_').lower()}.mp3"
         tts.save(audio_path)
 
         try:
@@ -152,4 +149,4 @@ class Dictation:
 # Khởi chạy ứng dụng
 if __name__ in {"__main__", "__mp_main__"}:
     dictation = Dictation() 
-    dictation.run() 
+    dictation.run()
