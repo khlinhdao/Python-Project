@@ -1,9 +1,8 @@
 from gtts import gTTS
-from playsound import playsound
+import pygame
 from nicegui import ui
 import os
 import string
-
 
 class Dictation:
     def __init__(self):
@@ -26,6 +25,7 @@ class Dictation:
         ]
         self.current_index = 0
         self.result_label = None
+        pygame.mixer.init()  # Khởi tạo pygame mixer
 
     def normalize(self, word):
         """Chuyển đổi từ thành chữ thường và loại bỏ dấu câu."""
@@ -52,28 +52,40 @@ class Dictation:
         audio_path = "dictation.mp3"
         tts.save(audio_path)
 
+        # Phát âm thanh
         try:
-            playsound(audio_path)  # Phát âm thanh
+            pygame.mixer.music.load(audio_path)  # Tải file âm thanh
+            pygame.mixer.music.play()  # Phát âm thanh
+            while pygame.mixer.music.get_busy():  # Chờ cho đến khi âm thanh phát xong
+                continue
         except Exception as e:
             print(f"Audio playback error: {e}")
         finally:
             os.remove(audio_path)  # Xóa file sau khi phát
 
-    def play_feedback_sound(self, feedback_type):
+    def play_feedback_sound(self, x):
         """Phát âm thanh dựa trên kết quả đúng hoặc sai."""
-        feedback_messages = {
-            1: "Correct answer!",
-            2: "Wrong answer!",
-            3: "You have not entered your answer yet.",
-            4: "The correct answer is:"
-        }
-        
-        tts = gTTS(feedback_messages.get(feedback_type, ""))
-        audio_path = f"{feedback_messages[feedback_type].replace(' ', '_').lower()}.mp3"
+        if x == 1:
+            tts = gTTS("Correct answer!")
+            audio_path = "correct_answer.mp3"
+        elif x == 2:
+            tts = gTTS("Wrong answer!")
+            audio_path = "wrong_answer.mp3"
+        elif x == 3:
+            tts = gTTS("You have not entered your answer yet.")
+            audio_path = "no_answer.mp3"
+        else:
+            tts = gTTS("The correct answer is:")
+            audio_path = "answer.mp3"
+
         tts.save(audio_path)
 
+        # Phát âm thanh
         try:
-            playsound(audio_path)
+            pygame.mixer.music.load(audio_path)
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                continue
         except Exception as e:
             print(f"Audio playback error: {e}")
         finally:
@@ -144,7 +156,6 @@ class Dictation:
                 ui.button("Skip", on_click=lambda: self.change_sentence(answer_input), icon='fast_forward').style('background-color: #FF9800; color: white; font-size: 18px; margin: 10px;')
 
         ui.run(host="0.0.0.0", port=8080)
-
 
 # Khởi chạy ứng dụng
 if __name__ in {"__main__", "__mp_main__"}:
