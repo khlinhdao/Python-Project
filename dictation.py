@@ -1,163 +1,137 @@
-from gtts import gTTS
-import pygame
-from nicegui import ui
+import streamlit as st
+import pandas as pd
 import os
 import string
 
 class Dictation:
-    def __init__(self):
-        # Danh sách câu
-        self.sentences = [
-            "Hello, how are you?",
-            "Goodbye! See you later.",
-            "Thank you for your help.",
-            "I am sorry for the inconvenience.",
-            "Could you please help me?",
-            "How about we go out for dinner?",
-            "I completely agree with you.",
-            "I see your point, but I disagree.",
-            "Would you like to join us for lunch?",
-            "You did a great job!",
-            "It is a beautiful day outside.",
-            "I love reading books in my free time.",
-            "What do you think about this idea?",
-            "Always follow your heart."
-        ]
-        self.current_index = 0
-        self.result_label = None
-        pygame.mixer.init()  # Khởi tạo pygame mixer
+    def __init__(self, csv_file):
+        self.data = pd.read_csv(csv_file)
 
-    def normalize(self, word):
-        """Chuyển đổi từ thành chữ thường và loại bỏ dấu câu."""
-        return word.lower().translate(str.maketrans('', '', string.punctuation))
-
-    def compare_answers(self, user_answer, correct_sentence):
-        """So sánh từng từ trong câu trả lời của người dùng với câu chuẩn."""
-        user_words = user_answer.split()
-        correct_words = correct_sentence.split()
-
-        # Chuẩn hóa từ
-        user_words = [self.normalize(word) for word in user_words]
-        correct_words = [self.normalize(word) for word in correct_words]
-
-        # Kiểm tra xem câu trả lời có đúng không
-        if user_words == correct_words:
-            return "Correct answer!", None
+    def play_audio_file(self, index):
+        audio_file = self.data.iloc[index]['audio_file']
+        if os.path.exists(audio_file):
+            audio_bytes = open(audio_file, 'rb').read()
+            st.audio(audio_bytes, format='audio/mp3', start_time=0, autoplay=True)
         else:
-            return "Wrong answer!", correct_sentence
+            st.write(f"Audio file '{audio_file}' not found.")
 
-    def generate_audio(self, sentence):
-        """Tạo và phát file âm thanh cho câu hiện tại."""
-        tts = gTTS(sentence)
-        audio_path = "dictation.mp3"
-        tts.save(audio_path)
+    def normalize(self, text):
+        return text.lower().translate(str.maketrans('', '', string.punctuation.replace("'", "")))
 
-        # Phát âm thanh
-        try:
-            pygame.mixer.music.load(audio_path)  # Tải file âm thanh
-            pygame.mixer.music.play()  # Phát âm thanh
-            while pygame.mixer.music.get_busy():  # Chờ cho đến khi âm thanh phát xong
-                continue
-        except Exception as e:
-            print(f"Audio playback error: {e}")
-        finally:
-            os.remove(audio_path)  # Xóa file sau khi phát
-
-    def play_feedback_sound(self, x):
-        """Phát âm thanh dựa trên kết quả đúng hoặc sai."""
-        if x == 1:
-            tts = gTTS("Correct answer!")
-            audio_path = "correct_answer.mp3"
-        elif x == 2:
-            tts = gTTS("Wrong answer!")
-            audio_path = "wrong_answer.mp3"
-        elif x == 3:
-            tts = gTTS("You have not entered your answer yet.")
-            audio_path = "no_answer.mp3"
-        else:
-            tts = gTTS("The correct answer is:")
-            audio_path = "answer.mp3"
-
-        tts.save(audio_path)
-
-        # Phát âm thanh
-        try:
-            pygame.mixer.music.load(audio_path)
-            pygame.mixer.music.play()
-            while pygame.mixer.music.get_busy():
-                continue
-        except Exception as e:
-            print(f"Audio playback error: {e}")
-        finally:
-            os.remove(audio_path)
-
-    def play_sound(self):
-        """Phát âm thanh cho câu hiện tại."""
-        self.result_label.set_text("")  # Xóa nội dung kết quả trước đó
-        current_sentence = self.sentences[self.current_index]
-        ui.timer(0.1, lambda: self.generate_audio(current_sentence), once=True)  # Phát âm thanh
-
-    def submit_answer(self, answer_input):
-        """Xử lý khi người dùng nhấn nút Kiểm tra."""
-        user_answer = answer_input.value.strip()
-
-        if not user_answer:
-            self.result_label.set_text("You have not entered your answer yet!")
-            self.result_label.style('color: orange; font-size: 28px;')
-            ui.timer(0.1, lambda: self.play_feedback_sound(3), once=True)
-            return
-
-        result, correct_sentence_returned = self.compare_answers(user_answer, self.sentences[self.current_index])
-        if correct_sentence_returned:
-            self.result_label.set_text(result)
-            self.result_label.style('color: red; font-size: 28px;')
-            ui.timer(0.1, lambda: self.play_feedback_sound(2), once=True)
-        else:
-            self.result_label.set_text(result)
-            self.result_label.style('color: green; font-size: 28px;')
-            ui.timer(0.1, lambda: self.play_feedback_sound(1), once=True)
-
-    def see_answer(self):
-        """Hiển thị câu trả lời đúng."""
-        correct_sentence = self.sentences[self.current_index]
-        self.result_label.set_text(f"The correct answer is: '{correct_sentence}'")
-        self.result_label.style('color: blue; font-size: 28px;')
-        ui.timer(0.1, lambda: self.play_feedback_sound(4), once=True)
-
-    def change_sentence(self, answer_input):
-        """Chuyển câu và phát âm thanh câu mới."""
-        answer_input.set_value("")  # Xóa nội dung ô nhập câu trả lời
-        self.result_label.set_text("")  # Xóa nội dung kết quả trước đó
-        self.current_index += 1
-        if self.current_index >= len(self.sentences):
-            self.current_index = 0  # Reset về đầu danh sách khi hết câu
-
-        ui.timer(0.1, self.play_sound, once=True)  # Phát âm thanh của câu mới
+    def check_answer(self, user_answer, index):
+        user_words = self.normalize(user_answer).strip().split()
+        correct_answer = self.data.iloc[index]['sentence']
+        correct_words = self.normalize(correct_answer).strip().split()
+        return user_words == correct_words, correct_answer
 
     def run(self):
-        """Khởi chạy giao diện người dùng."""
-        # Giao diện người dùng
-        with ui.column().style('align-items: center; justify-content: center; height: 100vh; width: 100vw;'):
-            ui.label("Dictation").style('font-size: 80px; color: #6D8EBF; margin-bottom: 20px;')
+        if "index" not in st.session_state:
+            st.session_state.index = 0
+    
+        if "user_answer" not in st.session_state:
+            st.session_state.user_answer = ""
 
-            answer_input = ui.input(placeholder="Enter your answer:").style('width: 500px; height: 50px; font-size: 18px; margin-bottom: 20px;')
+        st.markdown(
+            "<h2 style='text-align: center; font-size: 60px; font-weight: bold; margin-top: 100px;'>Dictation</h2>",
+            unsafe_allow_html=True
+        )
+        
+        # Hàng 1: Nút Skip và thanh âm thanh
+        col1, col2 = st.columns([8, 1])  # Tạo hai cột
+        with col2:  
+            if st.button("Skip", key="skip_button"):
+                st.session_state.index = (st.session_state.index + 1) % len(self.data)
+                st.session_state.user_answer = ""  # Xóa nội dung ô nhập liệu khi nhấn Skip
+        with col1:
+            self.play_audio_file(st.session_state.index)  # Phát âm thanh
 
-            self.result_label = ui.label("").style('color: #2196F3; font-size: 28px; margin-bottom: 20px;')
+        # Hàng 2: Input
+        user_answer = st.text_input("Enter your answer:", value=st.session_state.user_answer)
 
-            # Bố cục ngang để xếp các nút cạnh nhau
-            with ui.row().style('justify-content: center; margin-bottom: 20px;'):
-                # Nút phát âm thanh
-                ui.button("Play Sound", on_click=self.play_sound, icon='volume_up').style('background-color: #4CAF50; color: white; font-size: 18px; margin: 10px;')
-                # Nút kiểm tra câu trả lời
-                ui.button("Check", on_click=lambda: self.submit_answer(answer_input), icon='check').style('background-color: #20B2AA; color: white; font-size: 18px; margin: 10px;')
-                # Nút xem câu trả lời đúng
-                ui.button("See Answer", on_click=self.see_answer, icon='visibility').style('background-color: #0000FF; color: white; font-size: 18px; margin: 10px;')
-                # Nút chuyển câu
-                ui.button("Skip", on_click=lambda: self.change_sentence(answer_input), icon='fast_forward').style('background-color: #FF9800; color: white; font-size: 18px; margin: 10px;')
+        # Cập nhật giá trị của session state khi người dùng nhập
+        st.session_state.user_answer = user_answer  # Cập nhật giá trị
 
-        ui.run(host="0.0.0.0", port=8080)
+        # Hàng 3: Check và Show
+        col3, col4 = st.columns([1, 1], gap="small")  # Căn hai cột đều nhau
+        with col3:
+            if st.button("Check Answer", key="check_button"):
+                if st.session_state.user_answer:
+                    result, correct_answer = self.check_answer(st.session_state.user_answer, st.session_state.index)
+                    if result:
+                        st.success("Correct answer!")
+                    else:
+                        st.error(f"Wrong answer!")
+                else:
+                    st.warning("Please enter your answer before checking.")
 
-# Khởi chạy ứng dụng
-if __name__ in {"__main__", "__mp_main__"}:
-    dictation = Dictation() 
-    dictation.run()
+        with col4:
+            if st.button("Show Answer", key="show_button"):
+                correct_answer = self.data.iloc[st.session_state.index]['sentence']
+                st.info(f"The correct answer is: '{correct_answer}'")
+
+        # Nút quay lại
+        if st.button("Go Back to Level Selection"):
+            st.session_state.show_dictation = False  # Quay lại trang chọn mức độ
+
+
+if __name__ == "__main__":
+    if "show_dictation" not in st.session_state:
+        st.session_state.show_dictation = False
+
+    if not st.session_state.show_dictation:
+        # Tạo ba cột để căn giữa
+        col1, col2, col3 = st.columns([5, 10, 5])  # Tạo ba cột, cột giữa lớn hơn
+
+        with col1:
+            st.write("")  # Khoảng cách ở trên
+
+        with col2:  # Sử dụng cột giữa
+            st.markdown("<div style='margin-top: 100px;'></div>", unsafe_allow_html=True)
+            st.markdown(
+                """
+                <style>
+                .big-radio {
+                    font-size: 400px;  /* Tăng kích thước chữ của radio button */
+                }
+                .big-button {
+                    font-size: 40px;  /* Tăng kích thước chữ của nút */
+                    padding: 20px 40px; /* Tăng padding của nút */
+                    background-color: #4CAF50; /* Màu nền của nút */
+                    color: white; /* Màu chữ của nút */
+                    border: none; /* Bỏ đường viền */
+                    border-radius: 10px; /* Bo tròn góc nút */
+                    cursor: pointer; /* Con trỏ chuột khi di chuột qua nút */
+                }
+                .header {
+                    font-size: 30px;  /* Kích thước chữ cho tiêu đề */
+                    font-weight: bold; /* Độ đậm của chữ */
+                    text-align: center; /* Căn giữa tiêu đề */
+                    margin: 0 auto 30px; /* Căn giữa với margin tự động, khoảng cách dưới 30px */
+                    width: 300px; /* Chiều rộng tự động theo nội dung */
+                    display: block; /* Giúp chiều rộng có hiệu lực */
+                }
+
+                </style>
+                """, unsafe_allow_html=True
+            )
+
+            # Hiển thị tiêu đề
+            st.markdown('<p class="header">Select difficulty level:</p>', unsafe_allow_html=True)
+
+            # Tạo radio button
+            level = st.radio("", ("Easy", "Hard"), key="level_radio", index=0, label_visibility="collapsed")
+            start_button = st.button("Start Dictation", key="start_button")
+            if start_button:
+                st.session_state.level = level
+                if level == "Easy":
+                    st.session_state.csv_file = r'Audio/easy.csv'
+                else:
+                    st.session_state.csv_file = r'Audio/hard.csv'
+                st.session_state.show_dictation = True
+                st.query_params = {"started": True}
+        
+        with col3:
+            st.write("")  # Khoảng cách ở dưới
+    else:
+        dictation = Dictation(st.session_state.csv_file)
+        dictation.run()
