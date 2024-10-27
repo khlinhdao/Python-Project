@@ -1,137 +1,153 @@
-import streamlit as st
+from nicegui import ui
 import pandas as pd
-import os
 import string
 
 class Dictation:
-    def __init__(self, csv_file):
-        self.data = pd.read_csv(csv_file)
+    def __init__(self):
+        self.index = 0
+        self.user_answer = ""
+        self.audio_player = None
+        self.data = pd.DataFrame()  # Khởi tạo DataFrame rỗng
+        self.selected_difficulty = None
+        self.selected_topic = None
 
-    def play_audio_file(self, index):
-        audio_file = self.data.iloc[index]['audio_file']
-        if os.path.exists(audio_file):
-            audio_bytes = open(audio_file, 'rb').read()
-            st.audio(audio_bytes, format='audio/mp3', start_time=0, autoplay=True)
-        else:
-            st.write(f"Audio file '{audio_file}' not found.")
+        # Tạo các column cho từng trang
+        self.difficulty_column = ui.column().style('align-items: center;')
+        self.topic_column = ui.column().style('align-items: center;')
+        self.dictation_column = ui.column().style('align-items: center;')
+
+        # Tạo hàng chính để căn giữa
+        with ui.row().style('height: 100vh; display: flex; justify-content: center; align-items: center;'):
+            self.difficulty_column  
+            self.topic_column  
+            self.dictation_column  
+
+        self.render_difficulty_page()  # Khởi động ứng dụng tại trang chọn độ khó
+
+    def update_audio_file(self):
+        audio_file = self.data.iloc[self.index]['audio_file']
+        
+        if self.audio_player:
+            self.audio_player.delete()  # Xóa đối tượng âm thanh cũ
+
+        # Tạo đối tượng âm thanh mới và hiển thị thanh điều khiển
+        self.audio_player = ui.audio(audio_file).props('controls').style('width: 300px;')  
+        self.audio_player.play()  # Phát âm thanh
 
     def normalize(self, text):
         return text.lower().translate(str.maketrans('', '', string.punctuation.replace("'", "")))
 
-    def check_answer(self, user_answer, index):
-        user_words = self.normalize(user_answer).strip().split()
-        correct_answer = self.data.iloc[index]['sentence']
+    def check_answer(self):
+        user_words = self.normalize(self.user_answer).strip().split()
+        correct_answer = self.data.iloc[self.index]['sentence']
         correct_words = self.normalize(correct_answer).strip().split()
-        return user_words == correct_words, correct_answer
+        return user_words == correct_words
 
-    def run(self):
-        if "index" not in st.session_state:
-            st.session_state.index = 0
-    
-        if "user_answer" not in st.session_state:
-            st.session_state.user_answer = ""
+    def check_answer_click(self):
+        if self.user_answer:
+            result = self.check_answer()
+            ui.notify('Câu trả lời đúng!' if result else 'Câu trả lời sai!', type='positive' if result else 'negative')
+        else:
+            ui.notify('Vui lòng nhập câu trả lời trước khi kiểm tra.', type='warning')
 
-        st.markdown(
-            "<h2 style='text-align: center; font-size: 60px; font-weight: bold; margin-top: 100px;'>Dictation</h2>",
-            unsafe_allow_html=True
-        )
-        
-        # Hàng 1: Nút Skip và thanh âm thanh
-        col1, col2 = st.columns([8, 1])  # Tạo hai cột
-        with col2:  
-            if st.button("Skip", key="skip_button"):
-                st.session_state.index = (st.session_state.index + 1) % len(self.data)
-                st.session_state.user_answer = ""  # Xóa nội dung ô nhập liệu khi nhấn Skip
-        with col1:
-            self.play_audio_file(st.session_state.index)  # Phát âm thanh
+    def show_answer(self):
+        correct_answer = self.data.iloc[self.index]['sentence']
+        ui.notify(f"Câu trả lời đúng là: '{correct_answer}'", type='info')
 
-        # Hàng 2: Input
-        user_answer = st.text_input("Enter your answer:", value=st.session_state.user_answer)
+    def skip(self):
+        if len(self.data) > 0:  # Kiểm tra xem có dữ liệu trong DataFrame không
+            self.index = (self.index + 1) % len(self.data)  # Tăng chỉ số và quay lại đầu nếu vượt quá
+            self.user_answer = ""
+            self.input.value = ""  # Xóa ô nhập câu trả lời
+            self.update_audio_file()  # Cập nhật âm thanh cho câu tiếp theo
 
-        # Cập nhật giá trị của session state khi người dùng nhập
-        st.session_state.user_answer = user_answer  # Cập nhật giá trị
+    def load_data(self, url):
+        self.data = pd.read_csv(url)
+        self.index = 0  # Đặt lại chỉ số khi tải dữ liệu mới
+        self.update_audio_file()  # Cập nhật tệp âm thanh cho mục đầu tiên
 
-        # Hàng 3: Check và Show
-        col3, col4 = st.columns([1, 1], gap="small")  # Căn hai cột đều nhau
-        with col3:
-            if st.button("Check Answer", key="check_button"):
-                if st.session_state.user_answer:
-                    result, correct_answer = self.check_answer(st.session_state.user_answer, st.session_state.index)
-                    if result:
-                        st.success("Correct answer!")
-                    else:
-                        st.error(f"Wrong answer!")
-                else:
-                    st.warning("Please enter your answer before checking.")
+    def render_difficulty_page(self):
+        self.difficulty_column.clear()  # Xóa nội dung cũ
+        with self.difficulty_column:
+            ui.label('Chọn Độ Khó:').style('margin-bottom: 20px; font-size: 24px;')
+            with ui.row().style('justify-content: center; margin: 10px 0;'):
+                ui.button('Easy', on_click=lambda: self.go_to_topic_selection('Easy')).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
+                ui.button('Hard', on_click=lambda: self.go_to_topic_selection('Hard')).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
 
-        with col4:
-            if st.button("Show Answer", key="show_button"):
-                correct_answer = self.data.iloc[st.session_state.index]['sentence']
-                st.info(f"The correct answer is: '{correct_answer}'")
+        self.topic_column.clear()  # Xóa nội dung cũ
+        self.dictation_column.clear()  # Xóa nội dung cũ
+        self.difficulty_column.visible = True
+        self.topic_column.visible = False
+        self.dictation_column.visible = False
 
-        # Nút quay lại
-        if st.button("Go Back to Level Selection"):
-            st.session_state.show_dictation = False  # Quay lại trang chọn mức độ
+    def go_to_topic_selection(self, difficulty):
+        self.selected_difficulty = difficulty
+        ui.notify(f'Bạn đã chọn độ khó: {self.selected_difficulty}')
+        self.render_topic_page()  # Hiển thị trang chọn chủ đề
 
+    def render_topic_page(self):
+        self.topic_column.clear()  # Xóa nội dung cũ
+        with self.topic_column:
+            ui.label(f'Độ khó đã chọn: {self.selected_difficulty}').style('margin-bottom: 20px; font-size: 24px;')
+            ui.label(f'Chọn chủ đề:').style('margin-bottom: 10px; font-size: 24px;')
+            
+            # Tạo hàng cho các nút chủ đề
+            with ui.row().style('justify-content: center; margin: 10px 0;'):
+                if self.selected_difficulty == 'Easy':
+                    ui.button('Topic 1', on_click=lambda: self.set_topic('Topic 1 - Easy')).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
+                    ui.button('Topic 2', on_click=lambda: self.set_topic('Topic 2 - Easy')).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
+                elif self.selected_difficulty == 'Hard':
+                    ui.button('Topic 1', on_click=lambda: self.set_topic('Topic 1 - Hard')).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
+                    ui.button('Topic 2', on_click=lambda: self.set_topic('Topic 2 - Hard')).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
+            
+            # Nút Quay lại căn trái
+            ui.button('Quay lại', on_click=self.render_difficulty_page).style('margin: 10px 0; padding: 15px; font-size: 18px; align-self: flex-start;')  # Căn trái
 
-if __name__ == "__main__":
-    if "show_dictation" not in st.session_state:
-        st.session_state.show_dictation = False
+        self.difficulty_column.visible = False
+        self.dictation_column.visible = False
+        self.topic_column.visible = True
 
-    if not st.session_state.show_dictation:
-        # Tạo ba cột để căn giữa
-        col1, col2, col3 = st.columns([5, 10, 5])  # Tạo ba cột, cột giữa lớn hơn
+    def set_topic(self, topic):
+        self.selected_topic = topic
+        self.start_dictation()
 
-        with col1:
-            st.write("")  # Khoảng cách ở trên
+    def start_dictation(self):
+        if self.selected_difficulty == 'Easy':
+            if self.selected_topic == 'Topic 1 - Easy':
+                self.load_data('https://raw.githubusercontent.com/Phamlong2675/Python-Project/main/Audio/topic1easy.csv')
+            elif self.selected_topic == 'Topic 2 - Easy':
+                self.load_data('https://raw.githubusercontent.com/Phamlong2675/Python-Project/main/Audio/topic2easy.csv')
+        elif self.selected_difficulty == 'Hard':
+            if self.selected_topic == 'Topic 1 - Hard':
+                self.load_data('https://raw.githubusercontent.com/Phamlong2675/Python-Project/main/Audio/topic1hard.csv')
+            elif self.selected_topic == 'Topic 2 - Hard':
+                self.load_data('https://raw.githubusercontent.com/Phamlong2675/Python-Project/main/Audio/topic2hard.csv')
 
-        with col2:  # Sử dụng cột giữa
-            st.markdown("<div style='margin-top: 100px;'></div>", unsafe_allow_html=True)
-            st.markdown(
-                """
-                <style>
-                .big-radio {
-                    font-size: 400px;  /* Tăng kích thước chữ của radio button */
-                }
-                .big-button {
-                    font-size: 40px;  /* Tăng kích thước chữ của nút */
-                    padding: 20px 40px; /* Tăng padding của nút */
-                    background-color: #4CAF50; /* Màu nền của nút */
-                    color: white; /* Màu chữ của nút */
-                    border: none; /* Bỏ đường viền */
-                    border-radius: 10px; /* Bo tròn góc nút */
-                    cursor: pointer; /* Con trỏ chuột khi di chuột qua nút */
-                }
-                .header {
-                    font-size: 30px;  /* Kích thước chữ cho tiêu đề */
-                    font-weight: bold; /* Độ đậm của chữ */
-                    text-align: center; /* Căn giữa tiêu đề */
-                    margin: 0 auto 30px; /* Căn giữa với margin tự động, khoảng cách dưới 30px */
-                    width: 300px; /* Chiều rộng tự động theo nội dung */
-                    display: block; /* Giúp chiều rộng có hiệu lực */
-                }
+        self.render_dictation_page()  # Hiển thị trang dictation
 
-                </style>
-                """, unsafe_allow_html=True
-            )
+    def render_dictation_page(self):
+        self.dictation_column.clear()  # Xóa nội dung cũ
+        with self.dictation_column:
+            ui.label(f'Bắt Đầu Dictation cho: {self.selected_topic}').style('margin-bottom: 20px; font-size: 24px;')
 
-            # Hiển thị tiêu đề
-            st.markdown('<p class="header">Select difficulty level:</p>', unsafe_allow_html=True)
+            # Tạo hàng cho thanh âm thanh và nút "Tiếp"
+            with ui.row().style('justify-content: center; margin: 10px 0; align-items: center;'):
+                ui.button('Tiếp', on_click=lambda: [self.skip(), setattr(self.input, 'value', '')]).style('margin-left: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
+                self.update_audio_file()  # Cập nhật âm thanh
 
-            # Tạo radio button
-            level = st.radio("", ("Easy", "Hard"), key="level_radio", index=0, label_visibility="collapsed")
-            start_button = st.button("Start Dictation", key="start_button")
-            if start_button:
-                st.session_state.level = level
-                if level == "Easy":
-                    st.session_state.csv_file = r'Audio/easy.csv'
-                else:
-                    st.session_state.csv_file = r'Audio/hard.csv'
-                st.session_state.show_dictation = True
-                st.query_params = {"started": True}
-        
-        with col3:
-            st.write("")  # Khoảng cách ở dưới
-    else:
-        dictation = Dictation(st.session_state.csv_file)
-        dictation.run()
+            self.input = ui.input('Nhập câu trả lời của bạn:', on_change=lambda: setattr(self, 'user_answer', self.input.value)).style('margin-bottom: 10px; font-size: 24px; width: 400px; padding: 10px;')
+
+            # Tạo hàng cho các nút
+            with ui.row().style('justify-content: center; margin: 10px 0;'):
+                ui.button('Kiểm tra đáp án', on_click=self.check_answer_click).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
+                ui.button('Hiển thị đáp án', on_click=self.show_answer).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
+
+            # Nút Quay lại xuống dưới cùng và căn trái
+            ui.button('Quay lại', on_click=self.render_topic_page).style('margin: 10px 0; padding: 15px; font-size: 18px; align-self: flex-start;')  # Căn trái
+
+        self.difficulty_column.visible = False
+        self.topic_column.visible = False
+        self.dictation_column.visible = True
+
+Dictation()
+ui.run()
