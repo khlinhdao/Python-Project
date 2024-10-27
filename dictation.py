@@ -10,6 +10,7 @@ class Dictation:
         self.data = pd.DataFrame()  # Khởi tạo DataFrame rỗng
         self.selected_difficulty = None
         self.selected_topic = None
+        self.notification_label = ui.label('').style('margin-top: 20px; font-size: 20px; color: black;')  # Khởi tạo label thông báo
 
         # Tạo các column cho từng trang
         self.difficulty_column = ui.column().style('align-items: center;')
@@ -46,13 +47,16 @@ class Dictation:
     def check_answer_click(self):
         if self.user_answer:
             result = self.check_answer()
-            ui.notify('Câu trả lời đúng!' if result else 'Câu trả lời sai!', type='positive' if result else 'negative')
+            self.notification_label.text = 'Câu trả lời đúng!' if result else 'Câu trả lời sai!'
+            self.notification_label.style('color: green;' if result else 'color: red;')
         else:
-            ui.notify('Vui lòng nhập câu trả lời trước khi kiểm tra.', type='warning')
+            self.notification_label.text = 'Vui lòng nhập câu trả lời trước khi kiểm tra.'
+            self.notification_label.style('color: orange;')
 
     def show_answer(self):
         correct_answer = self.data.iloc[self.index]['sentence']
-        ui.notify(f"Câu trả lời đúng là: '{correct_answer}'", type='info')
+        self.notification_label.text = f"Câu trả lời đúng là: '{correct_answer}'"
+        self.notification_label.style('color: blue;')
 
     def skip(self):
         if len(self.data) > 0:  # Kiểm tra xem có dữ liệu trong DataFrame không
@@ -136,6 +140,8 @@ class Dictation:
                 self.update_audio_file()  # Cập nhật âm thanh
 
             self.input = ui.input('Nhập câu trả lời của bạn:', on_change=lambda: setattr(self, 'user_answer', self.input.value)).style('margin-bottom: 10px; font-size: 24px; width: 400px; padding: 10px;')
+            # Hiển thị label thông báo ở đây
+            self.notification_label = ui.label('').style('margin-top: 20px; font-size: 20px; color: black;')  # Khởi tạo label thông báo
 
             # Tạo hàng cho các nút
             with ui.row().style('justify-content: center; margin: 10px 0;'):
