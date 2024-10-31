@@ -36,7 +36,7 @@ class Dictation:
         self.audio_player.play()  # Phát âm thanh
 
     def normalize(self, text):
-        return text.lower().translate(str.maketrans('', '', string.punctuation.replace("'", "")))
+        return str(text).lower().translate(str.maketrans('', '', string.punctuation.replace("'", "")))
 
     def check_answer(self):
         user_words = self.normalize(self.user_answer).strip().split()
@@ -63,6 +63,7 @@ class Dictation:
             self.index = (self.index + 1) % len(self.data)  # Tăng chỉ số và quay lại đầu nếu vượt quá
             self.user_answer = ""
             self.input.value = ""  # Xóa ô nhập câu trả lời
+            self.notification_label.text = ""  # Xóa nội dung thông báo
             self.update_audio_file()  # Cập nhật âm thanh cho câu tiếp theo
 
     def load_data(self, url):
@@ -98,14 +99,16 @@ class Dictation:
             # Tạo hàng cho các nút chủ đề
             with ui.row().style('justify-content: center; margin: 10px 0;'):
                 if self.selected_difficulty == 'Easy':
-                    ui.button('Topic 1', on_click=lambda: self.set_topic('Topic 1 - Easy')).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
-                    ui.button('Topic 2', on_click=lambda: self.set_topic('Topic 2 - Easy')).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
+                    ui.button('Topic 1', on_click=lambda: self.set_topic('Topic 1 - Easy')).style('margin: 10px; padding: 15px; font-size: 18px;') 
+                    ui.button('Topic 2', on_click=lambda: self.set_topic('Topic 2 - Easy')).style('margin: 10px; padding: 15px; font-size: 18px;')  
+                    ui.button('Topic 3', on_click=lambda: self.set_topic('Topic 3 - Easy')).style('margin: 10px; padding: 15px; font-size: 18px;')
                 elif self.selected_difficulty == 'Hard':
-                    ui.button('Topic 1', on_click=lambda: self.set_topic('Topic 1 - Hard')).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
-                    ui.button('Topic 2', on_click=lambda: self.set_topic('Topic 2 - Hard')).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
+                    ui.button('Topic 1', on_click=lambda: self.set_topic('Topic 1 - Hard')).style('margin: 10px; padding: 15px; font-size: 18px;')  
+                    ui.button('Topic 2', on_click=lambda: self.set_topic('Topic 2 - Hard')).style('margin: 10px; padding: 15px; font-size: 18px;')
+                    ui.button('Topic 3', on_click=lambda: self.set_topic('Topic 3 - Hard')).style('margin: 10px; padding: 15px; font-size: 18px;')    
             
             # Nút Quay lại căn trái
-            ui.button('Quay lại', on_click=self.render_difficulty_page).style('margin: 10px 0; padding: 15px; font-size: 18px; align-self: flex-start;')  # Căn trái
+            ui.button('Quay lại', on_click=self.render_difficulty_page).style('margin: 10px 0; padding: 15px; font-size: 18px; align-self: flex-start;')
 
         self.difficulty_column.visible = False
         self.dictation_column.visible = False
@@ -121,11 +124,15 @@ class Dictation:
                 self.load_data('https://raw.githubusercontent.com/Phamlong2675/Python-Project/main/Audio/topic1easy.csv')
             elif self.selected_topic == 'Topic 2 - Easy':
                 self.load_data('https://raw.githubusercontent.com/Phamlong2675/Python-Project/main/Audio/topic2easy.csv')
+            elif self.selected_topic == 'Topic 3 - Easy':
+                self.load_data('https://raw.githubusercontent.com/Phamlong2675/Python-Project/main/Audio/topic3easy.csv')
         elif self.selected_difficulty == 'Hard':
             if self.selected_topic == 'Topic 1 - Hard':
                 self.load_data('https://raw.githubusercontent.com/Phamlong2675/Python-Project/main/Audio/topic1hard.csv')
             elif self.selected_topic == 'Topic 2 - Hard':
                 self.load_data('https://raw.githubusercontent.com/Phamlong2675/Python-Project/main/Audio/topic2hard.csv')
+            elif self.selected_topic == 'Topic 3 - Hard':
+                self.load_data('https://raw.githubusercontent.com/Phamlong2675/Python-Project/main/Audio/topic3hard.csv')
 
         self.render_dictation_page()  # Hiển thị trang dictation
 
