@@ -8,12 +8,12 @@ from io import StringIO
 class GitHubCSVManager:
     def __init__(self, username):
         self.username = username
-        self.token = "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"
+        self.token = "xxx"
         self.repo = "Phamlong2675/Python-Project"
-        self.folder_path = "user_dictation_progress"
+        self.folder_path = "dictation_process"
 
     def create_csv_file(self):
-        file_name = f"{self.username}_progress.csv"  # Tên file mới
+        file_name = f"{self.username}_process.csv"  # Tên file mới
         file_path = f"{self.folder_path}/{file_name}"  # Đường dẫn file đầy đủ
 
         # Kiểm tra xem file đã tồn tại hay chưa
@@ -57,7 +57,7 @@ class GitHubCSVManager:
 
     def update_csv_value(self, row_index, column_name, new_value):
         # URL tới file CSV trên GitHub
-        file_name = f"{self.username}_progress.csv"
+        file_name = f"{self.username}_process.csv"
         file_path = f"{self.folder_path}/{file_name}"
         url = f"https://api.github.com/repos/{self.repo}/contents/{file_path}"
 
@@ -146,14 +146,22 @@ class Dictation():
         correct_words = self.normalize(correct_answer).strip().split()
         return user_words == correct_words
 
+    def play_sound(self, audio_file):
+        self.play = ui.audio(audio_file).style('display: none;')  
+        self.play.play()
+
     def check_answer_click(self):
         if self.user_answer:
             result = self.check_answer()
-            self.notification_label.text = 'Câu trả lời đúng!' if result else 'Câu trả lời sai!'
-            self.notification_label.style('color: green;' if result else 'color: red;')
             if result:
+                self.notification_label.text = 'Câu trả lời đúng!'
+                self.notification_label.style('color: green;')
+                self.play_sound("https://raw.githubusercontent.com/Phamlong2675/Python-Project/refs/heads/main/Audio/effect%20sound/sound_correct.wav")
                 self.github_manager.update_csv_value(self.index, self.selected_topic, 'Đúng')    
             else:
+                self.notification_label.text = 'Câu trả lời sai!'
+                self.notification_label.style('color: red;')
+                self.play_sound("https://raw.githubusercontent.com/Phamlong2675/Python-Project/refs/heads/main/Audio/effect%20sound/sound_wrong.mp3")
                 self.github_manager.update_csv_value(self.index, self.selected_topic, 'Sai')  
         else:
             self.notification_label.text = 'Vui lòng nhập câu trả lời trước khi kiểm tra.'
