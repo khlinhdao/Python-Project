@@ -179,6 +179,8 @@ class Dictation():
             self.input.value = ""  # Xóa ô nhập câu trả lời
             self.notification_label.text = ""  # Xóa nội dung thông báo
             self.update_audio_file()  # Cập nhật âm thanh cho câu tiếp theo
+            self.no_sens.delete()
+            self.no_sens = ui.label(f'({self.index+1}/10)').style('font-size: 18px;')
 
     def load_data(self, url):
         self.data = pd.read_csv(url)
@@ -269,8 +271,9 @@ class Dictation():
 
             # Tạo hàng cho thanh âm thanh và nút "Tiếp"
             with ui.row().style('justify-content: center; margin: 10px 0; align-items: center;'):
-                ui.button('Tiếp', on_click=lambda: [self.skip(), setattr(self.input, 'value', '')]).style('margin-left: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
+                ui.button(on_click=lambda: [self.skip(), setattr(self.input, 'value', '')], icon='fast_forward').style('width: 50px; height: 50px; padding: 0;')
                 self.update_audio_file()  # Cập nhật âm thanh
+                self.no_sens = ui.label(f'({self.index+1}/10)').style('font-size: 18px;')
 
             self.input = ui.input('Nhập câu trả lời của bạn:', on_change=lambda: setattr(self, 'user_answer', self.input.value)).style('margin-bottom: 10px; font-size: 24px; width: 400px; padding: 10px;')
             # Hiển thị label thông báo ở đây
