@@ -55,12 +55,10 @@ class Dictation:
                 self.notification_label.text = 'Câu trả lời đúng!'
                 self.notification_label.style('color: green;')
                 self.play_sound("https://raw.githubusercontent.com/Phamlong2675/Python-Project/refs/heads/main/Audio/effect%20sound/sound_correct.wav")
-                self.github_manager.update_csv_value(self.index, self.selected_topic, 'Đúng')    
             else:
                 self.notification_label.text = 'Câu trả lời sai!'
                 self.notification_label.style('color: red;')
                 self.play_sound("https://raw.githubusercontent.com/Phamlong2675/Python-Project/refs/heads/main/Audio/effect%20sound/sound_wrong.mp3")
-                self.github_manager.update_csv_value(self.index, self.selected_topic, 'Sai')  
         else:
             self.notification_label.text = 'Vui lòng nhập câu trả lời trước khi kiểm tra.'
             self.notification_label.style('color: orange;')
@@ -73,6 +71,19 @@ class Dictation:
     def skip(self):
         if len(self.data) > 0:  # Kiểm tra xem có dữ liệu trong DataFrame không
             self.index = (self.index + 1) % len(self.data)  # Tăng chỉ số và quay lại đầu nếu vượt quá
+            self.user_answer = ""
+            self.input.value = ""  # Xóa ô nhập câu trả lời
+            self.notification_label.text = ""  # Xóa nội dung thông báo
+            self.update_audio_file()  # Cập nhật âm thanh cho câu tiếp theo
+            self.no_sens.delete()
+            self.no_sens = ui.label(f'({self.index+1}/10)').style('font-size: 18px;')
+
+    def turnback(self):
+        if len(self.data) > 0:  # Kiểm tra xem có dữ liệu trong DataFrame không
+            if self.index > 0:
+                self.index -= 1
+            else:
+                self.index = 9
             self.user_answer = ""
             self.input.value = ""  # Xóa ô nhập câu trả lời
             self.notification_label.text = ""  # Xóa nội dung thông báo
@@ -134,6 +145,7 @@ class Dictation:
 
     def set_topic(self, topic):
         self.selected_topic = topic
+        ui.notify(f'Bạn đã chọn chủ đề: {self.selected_topic}')
         self.start_dictation()
 
     def start_dictation(self):
@@ -166,9 +178,9 @@ class Dictation:
         self.dictation_column.clear()  # Xóa nội dung cũ
         with self.dictation_column:
             ui.label(f'Bắt Đầu Dictation cho: {self.selected_topic}').style('margin-bottom: 20px; font-size: 24px;')
-
-            # Tạo hàng cho thanh âm thanh và nút "Tiếp"
+   
             with ui.row().style('justify-content: center; margin: 10px 0; align-items: center;'):
+                ui.button(on_click=lambda: [self.turnback(), setattr(self.input, 'value', '')], icon='fast_rewind').style('width: 50px; height: 50px; padding: 0;')
                 ui.button(on_click=lambda: [self.skip(), setattr(self.input, 'value', '')], icon='fast_forward').style('width: 50px; height: 50px; padding: 0;')
                 self.update_audio_file()  # Cập nhật âm thanh
                 self.no_sens = ui.label(f'({self.index+1}/10)').style('font-size: 18px;')
@@ -179,11 +191,13 @@ class Dictation:
 
             # Tạo hàng cho các nút
             with ui.row().style('justify-content: center; margin: 10px 0;'):
-                ui.button('Kiểm tra đáp án', on_click=self.check_answer_click).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
-                ui.button('Hiển thị đáp án', on_click=self.show_answer).style('margin: 10px; padding: 15px; font-size: 18px;')  # Căn giữa
+                ui.button('Kiểm tra đáp án', on_click=self.check_answer_click).style('margin: 10px; padding: 15px; font-size: 18px;')
+                ui.button('Hiển thị đáp án', on_click=self.show_answer).style('margin: 10px; padding: 15px; font-size: 18px;')
 
-            # Nút Quay lại xuống dưới cùng và căn trái
-            ui.button('Quay lại', on_click=self.render_topic_page).style('margin: 10px 0; padding: 15px; font-size: 18px; align-self: flex-start;')  # Căn trái
+            with ui.row().style('justify-content: center; margin: 10px 0;'):
+                ui.button('Chọn độ khó', on_click=self.render_difficulty_page).style('margin: 10px; padding: 15px; font-size: 18px;')
+                ui.button('Chọn chủ đề', on_click=self.render_topic_page).style('margin: 10px; padding: 15px; font-size: 18px;')
+
 
         self.difficulty_column.visible = False
         self.topic_column.visible = False
