@@ -17,12 +17,6 @@ class Dictation:
         self.topic_column = ui.column().style('align-items: center;')
         self.dictation_column = ui.column().style('align-items: center;')
 
-        # Tạo hàng chính để căn giữa
-        with ui.row().style('height: 100vh; display: flex; justify-content: center; align-items: center;'):
-            self.difficulty_column  
-            self.topic_column  
-            self.dictation_column  
-
         self.render_difficulty_page()  # Khởi động ứng dụng tại trang chọn độ khó
 
     def update_audio_file(self):
