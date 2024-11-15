@@ -2,6 +2,7 @@ from nicegui import ui
 import pandas as pd
 import string
 
+
 class Dictation:
     def __init__(self):
         self.index = 0
