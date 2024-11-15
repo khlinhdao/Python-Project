@@ -4,7 +4,7 @@ class DictionaryBackend:
     def __init__(self):
         self.api_url = "https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
 
-    def get_word_info(self, word):
+    def get_word_info(self, word): #lấy từ vựng từ API
         response = requests.get(self.api_url.format(word=word))
         if response.status_code == 200:
             return response.json()
@@ -21,7 +21,7 @@ class DictionaryFrontend:
     def __init__(self, backend):
         self.backend = backend
 
-    def search_word(self):
+    def search_word(self): #tìm từ trong từ điển
         word = input("Enter a word to search: ").strip()
         if not word:
             print("Please enter a word to search.")
@@ -33,7 +33,7 @@ class DictionaryFrontend:
         else:
             print(f"No information found for word: '{word}'")
 
-    def display_word_info(self, word_info):
+    def display_word_info(self, word_info): #những thứ hiện ra màn hình như nghĩa, phát âm
         word_data = word_info[0]
         phonetic = word_data.get('phonetic', 'No phonetic available')
         meanings = word_data.get('meanings', [])
