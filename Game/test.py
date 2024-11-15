@@ -2,7 +2,7 @@ import random
 from nicegui import ui
 
 
-
+#backend
 class WordScrambleBackend:
     def __init__(self):
         self.topic_flashcards = {
@@ -252,7 +252,7 @@ class WordScrambleBackend:
     def get_score(self):
         return self.score
     
-
+#frontend
 class WordScrambleUI:
     def __init__(self, backend):
         self.backend = backend
